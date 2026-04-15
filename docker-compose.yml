@@ -1,6 +1,13 @@
 # Majlis local development stack
-# Brings up Postgres, Redis, the NestJS API, the Go realtime service,
-# and the Flutter web build served via nginx.
+#
+# Goal: 100% local. No cloud accounts required to run, develop, or test.
+# Cloud services are replaced by local equivalents or mock modes:
+#   - AWS S3           → MinIO                (http://localhost:9001 console)
+#   - Firebase OTP     → console log          (LOCAL_OTP_MODE=true in api)
+#   - Agora voice      → mock tokens          (AGORA_MODE=mock in api)
+#   - Tap / Fawry      → mock webhooks        (PAYMENTS_MODE=mock in api)
+#   - OpenAI / Whisper → local stub           (MODERATION_MODE=local in api)
+#   - SMTP             → Mailhog              (http://localhost:8025 UI)
 #
 # Usage:
 #   docker compose up -d
@@ -40,6 +47,57 @@ services:
       timeout: 3s
       retries: 10
 
+  # Local S3-compatible object storage. Replaces AWS S3 for avatars, gift
+  # animations, and flagged-voice-clip uploads during development.
+  minio:
+    image: minio/minio:latest
+    container_name: majlis-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # One-shot job: create the default buckets as soon as MinIO is up.
+  minio-init:
+    image: minio/mc:latest
+    container_name: majlis-minio-init
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin) do
+        echo '...waiting for minio';
+        sleep 2;
+      done;
+      /usr/bin/mc mb -p local/majlis-uploads || true;
+      /usr/bin/mc mb -p local/majlis-voice-clips || true;
+      /usr/bin/mc anonymous set download local/majlis-uploads || true;
+      echo 'minio buckets ready';
+      exit 0;
+      "
+
+  # Local SMTP catcher. Any email the API sends in dev lands here instead of
+  # leaving your machine. UI at http://localhost:8025.
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: majlis-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+
   api:
     build:
       context: ./apps/api
@@ -52,6 +110,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_started
     environment:
       NODE_ENV: development
       PORT: 3000
@@ -59,6 +119,23 @@ services:
       REDIS_URL: redis://redis:6379
       REALTIME_URL: http://realtime:8080
       JWT_SECRET: dev_only_change_me
+      # Local-first mock modes (zero cloud accounts required)
+      LOCAL_OTP_MODE: "true"
+      AGORA_MODE: mock
+      PAYMENTS_MODE: mock
+      MODERATION_MODE: local
+      # MinIO / S3
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET_UPLOADS: majlis-uploads
+      S3_BUCKET_VOICE_CLIPS: majlis-voice-clips
+      S3_FORCE_PATH_STYLE: "true"
+      # Mail (Mailhog)
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      SMTP_FROM: "Majlis <no-reply@majlis.local>"
     ports:
       - "3000:3000"
     volumes:
@@ -82,7 +159,7 @@ services:
 
   mobile-web:
     # Placeholder: serves the Flutter web build once `flutter build web` has been run.
-    # For day-to-day dev, run `flutter run -d chrome --web-port 8090` on the host instead.
+    # Day-to-day dev: `flutter run -d chrome --web-port 8090` on the host.
     image: nginx:1.27-alpine
     container_name: majlis-mobile-web
     restart: unless-stopped
@@ -96,3 +173,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  minio_data:

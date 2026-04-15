@@ -65,3 +65,21 @@
 - **Prometheus** — `api` and `realtime` export `/metrics`.
 - **Grafana** — dashboards: API latency, WS connections, Agora minutes, revenue/day.
 - **Structured logs** — JSON, no PII (phone numbers are hashed).
+
+## Local vs. cloud
+
+All development happens **locally** with no cloud accounts required. Cloud
+dependencies are replaced by local equivalents:
+
+| Prod                    | Local                                |
+|-------------------------|--------------------------------------|
+| AWS S3                  | MinIO                                |
+| Firebase OTP            | API logs (`LOCAL_OTP_MODE=true`)     |
+| Agora                   | Mock tokens (`AGORA_MODE=mock`)      |
+| Tap / Fawry             | Mock webhooks (`PAYMENTS_MODE=mock`) |
+| OpenAI moderation       | `@majlis/arabic-nlp` only            |
+| SES / SMTP              | Mailhog                              |
+
+See `docs/LOCAL_DEV.md` for the developer workflow. The `infra/terraform/`
+skeleton describes future cloud topology only — it is not part of the
+local loop and will not be applied until the team explicitly says so.

@@ -67,18 +67,26 @@ JS/TS is managed with **pnpm workspaces**; Go services with **Go workspaces**.
 
 ## Local development
 
+**Local-first.** Zero cloud accounts required. S3 → MinIO, Firebase OTP →
+console log, Agora / Tap / Fawry / OpenAI → mock modes, SMTP → Mailhog.
+
 Prereqs: Docker 24+, Node 20+, pnpm 9+, Go 1.22+, Flutter 3.x.
 
 ```bash
-# Bring up Postgres, Redis, API, realtime service, and Flutter web
-docker compose up -d
-
-# API (NestJS) — http://localhost:3000/health
-# Realtime (Go)  — http://localhost:8080/health
-# Flutter web    — http://localhost:8090
+cp apps/api/.env.example apps/api/.env
+make up            # docker compose up -d
 ```
 
-See `docs/ARCHITECTURE.md` for data flow and service boundaries.
+| Service        | URL                                  |
+|----------------|--------------------------------------|
+| API            | http://localhost:3000/health         |
+| Realtime       | http://localhost:8080/health         |
+| MinIO console  | http://localhost:9001 (minioadmin)   |
+| Mailhog UI     | http://localhost:8025                |
+| Flutter web    | http://localhost:8090 (`flutter run -d chrome --web-port 8090`) |
+
+Full setup + OTP in local mode + reset instructions: **`docs/LOCAL_DEV.md`**.
+Service boundaries + data flow: **`docs/ARCHITECTURE.md`**.
 
 ---
 
