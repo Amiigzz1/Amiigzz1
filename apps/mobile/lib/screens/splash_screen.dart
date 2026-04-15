@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Phase 0 splash screen.
-///
-/// Displays the Majlis brand and Arabic tagline while the app initializes.
-/// In Phase 1 this will hand off to the OTP flow or the home screen depending
-/// on auth state.
+/// Splash / bootstrap screen. Displayed while `AuthController` restores the
+/// session from secure storage. The router redirects away as soon as auth
+/// status resolves to `signedIn` or `signedOut`.
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
@@ -23,10 +21,7 @@ class SplashScreen extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                colors.primary,
-                colors.primaryContainer,
-              ],
+              colors: [colors.primary, colors.primaryContainer],
             ),
           ),
           child: SafeArea(
@@ -34,7 +29,6 @@ class SplashScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Placeholder logo mark — replaced in Phase 1 with brand asset.
                   Container(
                     width: 96,
                     height: 96,
@@ -82,7 +76,9 @@ class SplashScreen extends StatelessWidget {
                     height: 28,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(colors.onPrimary),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        colors.onPrimary,
+                      ),
                     ),
                   ),
                 ],

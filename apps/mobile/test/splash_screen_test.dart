@@ -11,10 +11,12 @@ void main() {
     expect(find.text('قهوتك الرقمية — العب، اتكلم، اتعرّف'), findsOneWidget);
 
     final directionality = tester.widget<Directionality>(
-      find.descendant(
-        of: find.byType(SplashScreen),
-        matching: find.byType(Directionality),
-      ).first,
+      find
+          .descendant(
+            of: find.byType(SplashScreen),
+            matching: find.byType(Directionality),
+          )
+          .first,
     );
     expect(directionality.textDirection, TextDirection.rtl);
   });
