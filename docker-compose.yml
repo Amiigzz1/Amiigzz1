@@ -118,7 +118,8 @@ services:
       DATABASE_URL: postgres://majlis:majlis_dev@postgres:5432/majlis
       REDIS_URL: redis://redis:6379
       REALTIME_URL: http://realtime:8080
-      JWT_SECRET: dev_only_change_me
+      JWT_SECRET: dev_only_change_me_please_long
+      PHONE_HASH_SECRET: dev_only_phone_hash_secret_change
       # Local-first mock modes (zero cloud accounts required)
       LOCAL_OTP_MODE: "true"
       AGORA_MODE: mock

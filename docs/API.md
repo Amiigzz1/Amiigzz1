@@ -21,15 +21,70 @@ Content-type: `application/json; charset=utf-8`.
 The realtime service exposes the same shape at `http://realtime:8080/health`
 with `service: "majlis-realtime"`.
 
-## Phase 1 — auth & profiles (planned)
+## Phase 1 — auth & profiles
+
+Implemented (Phase 1a):
+
+### `POST /v1/auth/request-otp`
+
+```jsonc
+// request
+{ "phone": "+966512345678", "country": "SA" /* optional hint */ }
+
+// response (200)
+{ "status": "sent" }
+// response in local mode (LOCAL_OTP_MODE=true) also includes:
+// { "status": "sent", "devCode": "482913" }
+```
+
+Rate limits: 5 requests / phone / hour.
+
+### `POST /v1/auth/verify-otp`
+
+```jsonc
+// request
+{ "phone": "+966512345678", "code": "482913", "deviceId": "optional" }
+
+// response (200)
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "accessTokenExpiresIn": 900,        // seconds
+  "refreshToken": "opaque-base64url",
+  "userId": "uuid",
+  "isNewUser": true
+}
+```
+
+- Access token TTL: 15 minutes (`JWT_ACCESS_TTL`).
+- Refresh token TTL: 30 days (`JWT_REFRESH_TTL`).
+- Max 3 verify attempts per issued OTP.
+
+### `POST /v1/auth/refresh`
+
+```jsonc
+// request
+{ "refreshToken": "..." , "deviceId": "optional" }
+
+// response (200)
+{ "accessToken": "...", "accessTokenExpiresIn": 900, "refreshToken": "..." }
+```
+
+Tokens are rotated on every refresh. Presenting a revoked refresh token
+triggers immediate revocation of **all** sessions for the user (replay
+defense).
+
+### `POST /v1/auth/logout`
+
+Auth: **required** (Bearer). Body: `{ "refreshToken": "..." }`.
+Returns 204. Revokes the presented refresh token only.
+
+Planned (Phase 1b):
 
 | Method | Path                      | Auth | Purpose                              |
 |--------|---------------------------|------|--------------------------------------|
-| POST   | `/v1/auth/request-otp`    | —    | Trigger Firebase OTP.                |
-| POST   | `/v1/auth/verify-otp`     | —    | Exchange OTP for JWT.                |
 | GET    | `/v1/users/me`            | ✅    | Current user profile.                |
 | PATCH  | `/v1/users/me`            | ✅    | Update display name, bio, etc.       |
-| POST   | `/v1/users/me/avatar`     | ✅    | Multipart upload → S3.               |
+| POST   | `/v1/users/me/avatar`     | ✅    | Multipart upload → MinIO/S3.         |
 
 ## Phase 2 — voice rooms (planned)
 

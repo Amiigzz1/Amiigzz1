@@ -71,5 +71,14 @@ mobile-run: ## Run Flutter in Chrome against the local API
 db-shell: ## psql into the local Postgres
 	docker compose exec postgres psql -U majlis -d majlis
 
+db-migrate: ## Apply Prisma migrations (uses migration history)
+	docker compose exec api npx prisma migrate deploy
+
+db-push: ## Push Prisma schema to DB without migration history (fast local)
+	docker compose exec api npx prisma db push
+
+db-studio: ## Open Prisma Studio on http://localhost:5555
+	docker compose exec -e BROWSER=none api npx prisma studio --port 5555 --hostname 0.0.0.0
+
 redis-shell: ## redis-cli into the local Redis
 	docker compose exec redis redis-cli

@@ -13,9 +13,6 @@ jobs:
   api:
     name: api (NestJS)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/api
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -25,10 +22,18 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm"
-          cache-dependency-path: apps/api/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile || pnpm install
-      - run: pnpm run build
-      - run: pnpm run test -- --passWithNoTests
+      - name: Install
+        working-directory: apps/api
+        run: pnpm install --no-frozen-lockfile
+      - name: Prisma generate
+        working-directory: apps/api
+        run: pnpm exec prisma generate
+      - name: Build
+        working-directory: apps/api
+        run: pnpm run build
+      - name: Test
+        working-directory: apps/api
+        run: pnpm test
 
   realtime:
     name: realtime (Go)
@@ -41,7 +46,6 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-          cache-dependency-path: apps/realtime/go.sum
       - run: go build ./...
       - run: go test ./...
       - run: go vet ./...
