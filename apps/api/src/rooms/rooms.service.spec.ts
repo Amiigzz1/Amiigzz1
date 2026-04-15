@@ -3,7 +3,13 @@ import type { ConfigService } from '@nestjs/config';
 
 import type { AgoraService } from '../agora/agora.service';
 import type { PrismaService } from '../prisma/prisma.service';
+import type { RealtimeService } from '../realtime/realtime.service';
 import { RoomsService } from './rooms.service';
+
+const fakeRealtime = (): RealtimeService =>
+  ({
+    ensureRoom: jest.fn().mockResolvedValue(undefined),
+  }) as unknown as RealtimeService;
 
 function makeAgora(): AgoraService {
   return {
@@ -43,7 +49,7 @@ function makeService(prisma: PrismaService): RoomsService {
   const config = {
     get: (k: string) => (k === 'REALTIME_URL' ? 'http://realtime:8080' : undefined),
   } as unknown as ConfigService;
-  return new RoomsService(prisma, makeAgora(), config);
+  return new RoomsService(prisma, makeAgora(), fakeRealtime(), config);
 }
 
 describe('RoomsService.create', () => {
@@ -126,7 +132,7 @@ describe('RoomsService.getById', () => {
       expiresAt: 1_900_000_000,
       role: 'publisher',
     });
-    const svc = new RoomsService(prisma, agora, {
+    const svc = new RoomsService(prisma, agora, fakeRealtime(), {
       get: () => 'http://realtime:8080',
     } as unknown as ConfigService);
 

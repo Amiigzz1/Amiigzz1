@@ -101,6 +101,15 @@ export class EnvConfig {
   @IsOptional()
   @IsString()
   S3_PUBLIC_URL?: string;
+
+  /**
+   * Shared secret for NestJS → realtime internal HTTP calls. Must match
+   * REALTIME_INTERNAL_TOKEN on the realtime service. Optional so the API
+   * still boots when realtime is unreachable (calls are best-effort).
+   */
+  @IsOptional()
+  @IsString()
+  REALTIME_INTERNAL_TOKEN?: string;
 }
 
 export function validateEnv(raw: Record<string, unknown>): EnvConfig {

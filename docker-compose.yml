@@ -120,6 +120,7 @@ services:
       REALTIME_URL: http://realtime:8080
       JWT_SECRET: dev_only_change_me_please_long
       PHONE_HASH_SECRET: dev_only_phone_hash_secret_change
+      REALTIME_INTERNAL_TOKEN: dev_only_realtime_internal_token
       # Local-first mock modes (zero cloud accounts required)
       LOCAL_OTP_MODE: "true"
       AGORA_MODE: mock
@@ -156,6 +157,9 @@ services:
     environment:
       PORT: "8080"
       REDIS_URL: redis://redis:6379
+      # Shared with the API for JWT verification on WebSocket upgrade.
+      JWT_SECRET: dev_only_change_me_please_long
+      REALTIME_INTERNAL_TOKEN: dev_only_realtime_internal_token
     ports:
       - "8080:8080"
 

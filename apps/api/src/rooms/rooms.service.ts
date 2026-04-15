@@ -8,6 +8,7 @@ import type { Prisma } from '@prisma/client';
 
 import { AgoraService } from '../agora/agora.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import type { CreateRoomDto } from './dto/create-room.dto';
 import type { ListRoomsQuery } from './dto/list-rooms.query';
 import type {
@@ -31,6 +32,7 @@ export class RoomsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly agora: AgoraService,
+    private readonly realtime: RealtimeService,
     config: ConfigService,
   ) {
     // Derived here so controllers stay free of env lookups.
@@ -58,6 +60,13 @@ export class RoomsService {
           select: { id: true, displayName: true, avatarUrl: true },
         },
       },
+    });
+    // Fire-and-forget: the realtime service EnsureRoom is idempotent, so a
+    // retry on the next WS connect is fine if this call fails.
+    void this.realtime.ensureRoom({
+      id: created.id,
+      ownerId: created.ownerId,
+      maxSeats: created.maxSeats,
     });
     return this.toSummary(created);
   }

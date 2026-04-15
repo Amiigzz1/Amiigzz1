@@ -7,6 +7,7 @@ import { CommonModule } from './common/common.module';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RealtimeModule } from './realtime/realtime.module';
 import { RedisModule } from './redis/redis.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { StorageModule } from './storage/storage.module';
@@ -23,6 +24,7 @@ import { UsersModule } from './users/users.module';
     CommonModule,
     StorageModule,
     AgoraModule,
+    RealtimeModule,
     AuthModule,
     UsersModule,
     RoomsModule,
