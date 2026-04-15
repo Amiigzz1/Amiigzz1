@@ -1,0 +1,52 @@
+{
+  "@@locale": "en",
+  "appName": "Majlis",
+  "splashTagline": "Your digital coffee — play, talk, connect",
+  "loading": "Loading…",
+
+  "phoneEntryTitle": "Sign in in one minute",
+  "phoneEntrySubtitle": "We'll send a code to your phone.",
+  "phoneFieldLabel": "Phone number",
+  "phoneFieldHint": "5XXXXXXXX",
+  "countryLabel": "Country",
+  "continueAction": "Continue",
+
+  "otpTitle": "Enter the code",
+  "otpSubtitle": "We sent a 6-digit code to {phone}",
+  "otpResend": "Resend code",
+  "otpResendIn": "Resend in {seconds}s",
+  "otpInvalid": "Invalid or expired code",
+  "verifyAction": "Verify",
+
+  "profileSetupTitle": "Let's get to know you",
+  "profileSetupSubtitle": "Pick a name and photo — you can change them anytime.",
+  "displayNameLabel": "Name",
+  "displayNameHint": "Shown to others in rooms",
+  "bioLabel": "Bio (optional)",
+  "selectAvatarAction": "Pick a photo",
+  "saveAction": "Save",
+  "skipAction": "Skip",
+
+  "homeGreeting": "Hi {name} 👋",
+  "homeSubtitle": "Open a room or jump into a game.",
+  "homePlayLudo": "Play Ludo",
+  "homeExploreRooms": "Explore rooms",
+
+  "settingsTitle": "Settings",
+  "settingsLanguage": "Language",
+  "settingsLogout": "Log out",
+  "settingsVersion": "Version {version}",
+
+  "errorNetwork": "No connection. Check your network.",
+  "errorGeneric": "Something went wrong. Try again.",
+  "errorUnauthorized": "Session expired, please sign in again.",
+
+  "countrySA": "Saudi Arabia",
+  "countryAE": "United Arab Emirates",
+  "countryEG": "Egypt",
+  "countryKW": "Kuwait",
+  "countryOM": "Oman",
+  "countryBH": "Bahrain",
+  "countryQA": "Qatar",
+  "countryJO": "Jordan"
+}

@@ -1,0 +1,21 @@
+{
+  "name": "majlis",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Majlis — voice-first social gaming platform for the MENA market",
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "lint": "pnpm -r --if-present run lint",
+    "test": "pnpm -r --if-present run test",
+    "build": "pnpm -r --if-present run build",
+    "dev:api": "pnpm --filter @majlis/api start:dev",
+    "dev:admin": "pnpm --filter @majlis/admin dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

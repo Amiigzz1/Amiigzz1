@@ -1,0 +1,403 @@
+// Majlis — Prisma schema
+// All personally identifiable identifiers are hashed. `phone_hash` is the
+// primary lookup field; the raw phone number is never persisted.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Users ----------
+
+enum Country {
+  SA
+  AE
+  EG
+  KW
+  OM
+  BH
+  QA
+  JO
+}
+
+enum Language {
+  ar
+  en
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  // HMAC-SHA256(phone_e164) — stable, non-reversible, safe to log.
+  phoneHash    String    @unique @map("phone_hash")
+  // Encrypted E.164 phone for support lookups. NULL until we wire KMS.
+  phoneCipher  String?   @map("phone_cipher")
+  displayName  String?   @map("display_name") @db.VarChar(48)
+  avatarUrl    String?   @map("avatar_url")
+  country      Country?
+  language     Language  @default(ar)
+  birthdate    DateTime? @db.Date
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  bannedAt            DateTime? @map("banned_at")
+  banReason           String?   @map("ban_reason")
+  prayerQuietHours    Boolean   @default(true) @map("prayer_quiet_hours")
+  notificationsEnabled Boolean  @default(true) @map("notifications_enabled")
+
+  profile         UserProfile?
+  refreshTokens   RefreshToken[]
+  rooms           Room[]              @relation("RoomOwner")
+  wallet          Wallet?
+  transactions    Transaction[]
+  giftsSent       GiftSend[]          @relation("GiftSender")
+  giftsReceived   GiftSend[]          @relation("GiftRecipient")
+  payments        Payment[]
+  withdrawals     Withdrawal[]
+  filedReports    ModerationReport[]
+  receivedActions ModerationAction[]  @relation("TargetOfAction")
+  appeals         ModerationAppeal[]
+  deviceTokens    DeviceToken[]
+
+  @@index([createdAt])
+  @@map("users")
+}
+
+model DeviceToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  token      String   @unique
+  platform   String   @db.VarChar(16) // 'ios' | 'android' | 'web'
+  createdAt  DateTime @default(now()) @map("created_at")
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+model UserProfile {
+  userId        String   @id @map("user_id") @db.Uuid
+  bio           String?  @db.VarChar(240)
+  favoriteGames String[] @default([]) @map("favorite_games")
+  badges        String[] @default([])
+  frameId       String?  @map("frame_id")
+  nameplateId   String?  @map("nameplate_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+// ---------- Rooms ----------
+
+enum RoomCategory {
+  gaming
+  music
+  chat
+  story
+}
+
+model Room {
+  id            String        @id @default(uuid()) @db.Uuid
+  name          String        @db.VarChar(64)
+  description   String?       @db.VarChar(240)
+  ownerId       String        @map("owner_id") @db.Uuid
+  category      RoomCategory
+  country       Country?
+  maxSeats      Int           @default(8) @map("max_seats")
+  locked        Boolean       @default(false)
+  // Agora channel id. Unique so two rooms never collide on the voice layer.
+  agoraChannel  String        @unique @map("agora_channel")
+  // Live participant + speaker counts, maintained by the Go realtime service.
+  // Persisted here so Discover can rank rooms without a round-trip to Redis.
+  listenersLive Int           @default(0) @map("listeners_live")
+  speakersLive  Int           @default(0) @map("speakers_live")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  closedAt      DateTime?     @map("closed_at")
+
+  owner             User              @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  giftSends         GiftSend[]
+  moderationReports ModerationReport[]
+
+  @@index([closedAt, category, country, createdAt])
+  @@map("rooms")
+}
+
+// ---------- Auth ----------
+
+// Refresh tokens live in Redis for the hot path (rotation, revocation), but
+// we mirror them to Postgres so security audits, per-user device lists, and
+// "log out everywhere" survive a Redis flush.
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  // SHA-256 of the opaque refresh token string.
+  tokenHash  String    @unique @map("token_hash")
+  deviceId   String?   @map("device_id")
+  userAgent  String?   @map("user_agent") @db.VarChar(256)
+  ipHash     String?   @map("ip_hash")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  // When a token is rotated, we point to the successor for forensic chains.
+  rotatedTo  String?   @map("rotated_to") @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ---------- Economy ----------
+
+enum TxType {
+  purchase
+  game_stake
+  game_payout
+  gift_sent
+  gift_received
+  withdrawal
+  admin_adjust
+}
+
+enum GameKind {
+  ludo
+}
+
+model Wallet {
+  userId    String   @id @map("user_id") @db.Uuid
+  coins     BigInt   @default(0)
+  diamonds  BigInt   @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallets")
+}
+
+model Transaction {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  type         TxType
+  coinsDelta   BigInt   @default(0) @map("coins_delta")
+  diamondDelta BigInt   @default(0) @map("diamond_delta")
+  /// Idempotency key scoped by (user, type, refId).
+  refId        String   @map("ref_id")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, refId])
+  @@index([userId, createdAt])
+  @@map("transactions")
+}
+
+model GameRound {
+  id           String    @id @default(uuid()) @db.Uuid
+  kind         GameKind
+  stakeCoins   BigInt    @map("stake_coins")
+  winnerId     String?   @map("winner_id") @db.Uuid
+  participants String[]  @default([]) @db.Uuid
+  startedAt    DateTime  @default(now()) @map("started_at")
+  endedAt      DateTime? @map("ended_at")
+  metadata     Json?
+
+  @@index([startedAt])
+  @@map("game_rounds")
+}
+
+// ---------- Gifts ----------
+
+model GiftCatalog {
+  id           String   @id
+  nameAr       String   @map("name_ar") @db.VarChar(40)
+  nameEn       String   @map("name_en") @db.VarChar(40)
+  priceCoins   BigInt   @map("price_coins")
+  animationUrl String?  @map("animation_url")
+  category     String   @db.VarChar(32)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  sends GiftSend[]
+
+  @@map("gifts_catalog")
+}
+
+model GiftSend {
+  id            String   @id @default(uuid()) @db.Uuid
+  giftId        String   @map("gift_id")
+  senderId      String   @map("sender_id") @db.Uuid
+  recipientId   String   @map("recipient_id") @db.Uuid
+  roomId        String?  @map("room_id") @db.Uuid
+  quantity      Int      @default(1)
+  totalCoins    BigInt   @map("total_coins")
+  totalDiamonds BigInt   @map("total_diamonds")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  gift      GiftCatalog @relation(fields: [giftId], references: [id])
+  sender    User        @relation("GiftSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User        @relation("GiftRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  room      Room?       @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([senderId, createdAt])
+  @@index([recipientId, createdAt])
+  @@map("gift_sends")
+}
+
+// ---------- Payments ----------
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  refunded
+}
+
+model Payment {
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @map("user_id") @db.Uuid
+  packageId    String        @map("package_id")
+  coinsGranted BigInt        @map("coins_granted")
+  amount       Decimal       @db.Decimal(10, 2)
+  currency     String        @db.VarChar(3)
+  provider     String        @db.VarChar(32)
+  providerRef  String        @map("provider_ref")
+  status       PaymentStatus @default(pending)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  settledAt    DateTime?     @map("settled_at")
+  metadata     Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerRef])
+  @@index([userId, createdAt])
+  @@map("payments")
+}
+
+// ---------- Withdrawals ----------
+
+enum WithdrawalStatus {
+  pending
+  approved
+  rejected
+  paid
+}
+
+model Withdrawal {
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @map("user_id") @db.Uuid
+  diamonds      BigInt
+  amountUsd     Decimal          @map("amount_usd") @db.Decimal(10, 2)
+  method        String           @db.VarChar(32)
+  methodDetails Json             @map("method_details")
+  status        WithdrawalStatus @default(pending)
+  reviewerId    String?          @map("reviewer_id") @db.Uuid
+  reason        String?
+  requestedAt   DateTime         @default(now()) @map("requested_at")
+  reviewedAt    DateTime?        @map("reviewed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, requestedAt])
+  @@index([userId])
+  @@map("withdrawals")
+}
+
+// ---------- Moderation ----------
+
+enum ReportTargetType {
+  user
+  room
+  message
+  voice_clip
+}
+
+enum ReportStatus {
+  open
+  under_review
+  resolved
+  dismissed
+}
+
+enum ModerationActionKind {
+  warning
+  mute_24h
+  ban_7d
+  ban_30d
+  ban_permanent
+  no_action
+}
+
+enum AppealStatus {
+  open
+  upheld
+  overturned
+}
+
+model ModerationReport {
+  id          String           @id @default(uuid()) @db.Uuid
+  reporterId  String           @map("reporter_id") @db.Uuid
+  targetType  ReportTargetType @map("target_type")
+  targetId    String           @map("target_id")
+  roomId      String?          @map("room_id") @db.Uuid
+  category    String           @db.VarChar(32)
+  details     String?          @db.VarChar(500)
+  status      ReportStatus     @default(open)
+  autoFlags   Json?            @map("auto_flags")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  resolvedAt  DateTime?        @map("resolved_at")
+  resolverId  String?          @map("resolver_id") @db.Uuid
+
+  reporter User               @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  room     Room?              @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  actions  ModerationAction[]
+
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+  @@map("moderation_reports")
+}
+
+model ModerationAction {
+  id           String                @id @default(uuid()) @db.Uuid
+  targetUserId String                @map("target_user_id") @db.Uuid
+  moderatorId  String                @map("moderator_id") @db.Uuid
+  action       ModerationActionKind
+  reason       String                @db.VarChar(500)
+  reportId     String?               @map("report_id") @db.Uuid
+  banUntil     DateTime?             @map("ban_until")
+  createdAt    DateTime              @default(now()) @map("created_at")
+
+  target  User              @relation("TargetOfAction", fields: [targetUserId], references: [id], onDelete: Cascade)
+  report  ModerationReport? @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  appeals ModerationAppeal[]
+
+  @@index([targetUserId])
+  @@index([createdAt])
+  @@map("moderation_actions")
+}
+
+model ModerationAppeal {
+  id            String       @id @default(uuid()) @db.Uuid
+  userId        String       @map("user_id") @db.Uuid
+  actionId      String       @map("action_id") @db.Uuid
+  reason        String       @db.VarChar(500)
+  status        AppealStatus @default(open)
+  reviewerId    String?      @map("reviewer_id") @db.Uuid
+  reviewerNotes String?      @map("reviewer_notes") @db.VarChar(500)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  resolvedAt    DateTime?    @map("resolved_at")
+
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action ModerationAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, actionId])
+  @@index([status, createdAt])
+  @@map("moderation_appeals")
+}

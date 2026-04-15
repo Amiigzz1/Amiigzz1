@@ -1,0 +1,52 @@
+{
+  "@@locale": "ar",
+  "appName": "مجلس",
+  "splashTagline": "قهوتك الرقمية — العب، اتكلم، اتعرّف",
+  "loading": "جارِ التحميل…",
+
+  "phoneEntryTitle": "دخولك بدقيقة واحدة",
+  "phoneEntrySubtitle": "هنبعت لك كود على رقمك.",
+  "phoneFieldLabel": "رقم الجوال",
+  "phoneFieldHint": "5XXXXXXXX",
+  "countryLabel": "الدولة",
+  "continueAction": "التالي",
+
+  "otpTitle": "أدخل الكود",
+  "otpSubtitle": "كود مكوّن من 6 أرقام بعتناه لك على {phone}",
+  "otpResend": "إعادة إرسال الكود",
+  "otpResendIn": "إعادة الإرسال بعد {seconds} ثانية",
+  "otpInvalid": "الكود غير صحيح أو انتهت صلاحيته",
+  "verifyAction": "تأكيد",
+
+  "profileSetupTitle": "خلّينا نتعرّف عليك",
+  "profileSetupSubtitle": "اختار اسم وصورة — تقدر تغيّرهم في أي وقت.",
+  "displayNameLabel": "الاسم",
+  "displayNameHint": "ظاهر للناس في الغرف",
+  "bioLabel": "نبذة عنك (اختياري)",
+  "selectAvatarAction": "اختار صورة",
+  "saveAction": "حفظ",
+  "skipAction": "تخطّي",
+
+  "homeGreeting": "أهلاً {name} 👋",
+  "homeSubtitle": "ابدأ بفتح غرفة أو دخول لعبة.",
+  "homePlayLudo": "العب لودو",
+  "homeExploreRooms": "استكشف الغرف",
+
+  "settingsTitle": "الإعدادات",
+  "settingsLanguage": "اللغة",
+  "settingsLogout": "تسجيل خروج",
+  "settingsVersion": "الإصدار {version}",
+
+  "errorNetwork": "مافي اتصال. تأكد من الإنترنت.",
+  "errorGeneric": "حصل خطأ. جرّب تاني.",
+  "errorUnauthorized": "انتهت الجلسة، سجّل دخول تاني.",
+
+  "countrySA": "السعودية",
+  "countryAE": "الإمارات",
+  "countryEG": "مصر",
+  "countryKW": "الكويت",
+  "countryOM": "عُمان",
+  "countryBH": "البحرين",
+  "countryQA": "قطر",
+  "countryJO": "الأردن"
+}

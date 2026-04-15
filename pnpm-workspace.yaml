@@ -1,0 +1,5 @@
+packages:
+  - "apps/api"
+  - "apps/admin"
+  - "apps/games/*"
+  - "packages/*"

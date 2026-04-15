@@ -1,0 +1,182 @@
+# Majlis local development stack
+#
+# Goal: 100% local. No cloud accounts required to run, develop, or test.
+# Cloud services are replaced by local equivalents or mock modes:
+#   - AWS S3           → MinIO                (http://localhost:9001 console)
+#   - Firebase OTP     → console log          (LOCAL_OTP_MODE=true in api)
+#   - Agora voice      → mock tokens          (AGORA_MODE=mock in api)
+#   - Tap / Fawry      → mock webhooks        (PAYMENTS_MODE=mock in api)
+#   - OpenAI / Whisper → local stub           (MODERATION_MODE=local in api)
+#   - SMTP             → Mailhog              (http://localhost:8025 UI)
+#
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f api realtime
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: majlis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: majlis
+      POSTGRES_PASSWORD: majlis_dev
+      POSTGRES_DB: majlis
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U majlis -d majlis"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: majlis-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Local S3-compatible object storage. Replaces AWS S3 for avatars, gift
+  # animations, and flagged-voice-clip uploads during development.
+  minio:
+    image: minio/minio:latest
+    container_name: majlis-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # One-shot job: create the default buckets as soon as MinIO is up.
+  minio-init:
+    image: minio/mc:latest
+    container_name: majlis-minio-init
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin) do
+        echo '...waiting for minio';
+        sleep 2;
+      done;
+      /usr/bin/mc mb -p local/majlis-uploads || true;
+      /usr/bin/mc mb -p local/majlis-voice-clips || true;
+      /usr/bin/mc anonymous set download local/majlis-uploads || true;
+      echo 'minio buckets ready';
+      exit 0;
+      "
+
+  # Local SMTP catcher. Any email the API sends in dev lands here instead of
+  # leaving your machine. UI at http://localhost:8025.
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: majlis-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+      target: dev
+    container_name: majlis-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgres://majlis:majlis_dev@postgres:5432/majlis
+      REDIS_URL: redis://redis:6379
+      REALTIME_URL: http://realtime:8080
+      JWT_SECRET: dev_only_change_me_please_long
+      PHONE_HASH_SECRET: dev_only_phone_hash_secret_change
+      REALTIME_INTERNAL_TOKEN: dev_only_realtime_internal_token
+      # Local-first mock modes (zero cloud accounts required)
+      LOCAL_OTP_MODE: "true"
+      AGORA_MODE: mock
+      PAYMENTS_MODE: mock
+      MODERATION_MODE: local
+      # MinIO / S3 — API talks to the container, clients use localhost.
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_URL: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET_UPLOADS: majlis-uploads
+      S3_BUCKET_VOICE_CLIPS: majlis-voice-clips
+      S3_FORCE_PATH_STYLE: "true"
+      # Mail (Mailhog)
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      SMTP_FROM: "Majlis <no-reply@majlis.local>"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/api:/app
+      - /app/node_modules
+
+  realtime:
+    build:
+      context: ./apps/realtime
+      dockerfile: Dockerfile
+    container_name: majlis-realtime
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: "8080"
+      REDIS_URL: redis://redis:6379
+      # Shared with the API for JWT verification on WebSocket upgrade.
+      JWT_SECRET: dev_only_change_me_please_long
+      REALTIME_INTERNAL_TOKEN: dev_only_realtime_internal_token
+    ports:
+      - "8080:8080"
+
+  mobile-web:
+    # Placeholder: serves the Flutter web build once `flutter build web` has been run.
+    # Day-to-day dev: `flutter run -d chrome --web-port 8090` on the host.
+    image: nginx:1.27-alpine
+    container_name: majlis-mobile-web
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    volumes:
+      - ./apps/mobile/build/web:/usr/share/nginx/html:ro
+    profiles:
+      - web
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
