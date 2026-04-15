@@ -1,0 +1,98 @@
+# Majlis local development stack
+# Brings up Postgres, Redis, the NestJS API, the Go realtime service,
+# and the Flutter web build served via nginx.
+#
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f api realtime
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: majlis-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: majlis
+      POSTGRES_PASSWORD: majlis_dev
+      POSTGRES_DB: majlis
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U majlis -d majlis"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: majlis-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+      target: dev
+    container_name: majlis-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgres://majlis:majlis_dev@postgres:5432/majlis
+      REDIS_URL: redis://redis:6379
+      REALTIME_URL: http://realtime:8080
+      JWT_SECRET: dev_only_change_me
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/api:/app
+      - /app/node_modules
+
+  realtime:
+    build:
+      context: ./apps/realtime
+      dockerfile: Dockerfile
+    container_name: majlis-realtime
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: "8080"
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8080:8080"
+
+  mobile-web:
+    # Placeholder: serves the Flutter web build once `flutter build web` has been run.
+    # For day-to-day dev, run `flutter run -d chrome --web-port 8090` on the host instead.
+    image: nginx:1.27-alpine
+    container_name: majlis-mobile-web
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    volumes:
+      - ./apps/mobile/build/web:/usr/share/nginx/html:ro
+    profiles:
+      - web
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,9 @@
+{
+  "@@locale": "ar",
+  "appName": "مجلس",
+  "@appName": { "description": "Brand name of the app" },
+  "splashTagline": "قهوتك الرقمية — العب، اتكلم، اتعرّف",
+  "@splashTagline": { "description": "Tagline shown on the splash screen" },
+  "loading": "جارِ التحميل…",
+  "@loading": { "description": "Generic loading indicator label" }
+}

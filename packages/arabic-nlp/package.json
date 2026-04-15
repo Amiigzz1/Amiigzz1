@@ -1,0 +1,15 @@
+{
+  "name": "@majlis/arabic-nlp",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Arabic text normalization + profanity detection for moderation (Gulf, Egyptian, Levantine dialects)",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "lint": "tsc --noEmit",
+    "test": "echo 'tests land in Phase 5' && exit 0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
