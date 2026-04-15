@@ -7,6 +7,8 @@ import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
+import { StorageModule } from './storage/storage.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -17,7 +19,9 @@ import { RedisModule } from './redis/redis.module';
     PrismaModule,
     RedisModule,
     CommonModule,
+    StorageModule,
     AuthModule,
+    UsersModule,
     HealthModule,
   ],
 })

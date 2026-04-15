@@ -66,6 +66,41 @@ export class EnvConfig {
 
   @IsIn(['local', 'openai'])
   MODERATION_MODE: string = 'local';
+
+  // ---- Object storage (MinIO locally, S3 in prod) ----
+
+  @IsNotEmpty()
+  S3_ENDPOINT!: string;
+
+  @IsOptional()
+  @IsString()
+  S3_REGION: string = 'us-east-1';
+
+  @IsNotEmpty()
+  S3_ACCESS_KEY!: string;
+
+  @IsNotEmpty()
+  S3_SECRET_KEY!: string;
+
+  @IsOptional()
+  @IsString()
+  S3_BUCKET_UPLOADS: string = 'majlis-uploads';
+
+  @IsOptional()
+  @IsString()
+  S3_BUCKET_VOICE_CLIPS: string = 'majlis-voice-clips';
+
+  @IsBooleanString()
+  S3_FORCE_PATH_STYLE: string = 'true';
+
+  /**
+   * Base URL returned to clients for public objects. In docker, the API talks
+   * to MinIO via `http://minio:9000`, but the Flutter client needs
+   * `http://localhost:9000`. Leave unset to reuse S3_ENDPOINT.
+   */
+  @IsOptional()
+  @IsString()
+  S3_PUBLIC_URL?: string;
 }
 
 export function validateEnv(raw: Record<string, unknown>): EnvConfig {

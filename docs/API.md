@@ -78,13 +78,60 @@ defense).
 Auth: **required** (Bearer). Body: `{ "refreshToken": "..." }`.
 Returns 204. Revokes the presented refresh token only.
 
-Planned (Phase 1b):
+Implemented (Phase 1b): user endpoints.
 
-| Method | Path                      | Auth | Purpose                              |
-|--------|---------------------------|------|--------------------------------------|
-| GET    | `/v1/users/me`            | ✅    | Current user profile.                |
-| PATCH  | `/v1/users/me`            | ✅    | Update display name, bio, etc.       |
-| POST   | `/v1/users/me/avatar`     | ✅    | Multipart upload → MinIO/S3.         |
+### `GET /v1/users/me`
+
+Auth: required. Returns the authenticated user with profile joined.
+
+```jsonc
+{
+  "id": "uuid",
+  "displayName": "ماجد",
+  "avatarUrl": "http://localhost:9000/majlis-uploads/avatars/uuid/abc123/medium.webp",
+  "country": "SA",
+  "language": "ar",
+  "birthdate": "1998-03-12",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "profile": {
+    "bio": "قهوة ولودو وبس",
+    "favoriteGames": ["ludo"],
+    "badges": [],
+    "frameId": null,
+    "nameplateId": null
+  }
+}
+```
+
+### `PATCH /v1/users/me`
+
+Auth: required. Partial update. Any subset of the fields below:
+
+```jsonc
+{
+  "displayName": "ماجد",         // 2..48 chars
+  "bio": "…",                    // 0..240 chars
+  "language": "ar" | "en",
+  "country": "SA" | "AE" | "EG" | "KW" | "OM" | "BH" | "QA" | "JO",
+  "birthdate": "1998-03-12",     // ISO date
+  "favoriteGames": ["ludo"]      // max 8 entries
+}
+```
+
+Returns the updated user in the same shape as `GET /users/me`.
+
+### `POST /v1/users/me/avatar`
+
+Auth: required. `multipart/form-data` with a `file` field.
+
+Constraints:
+- Allowed MIME: `image/jpeg`, `image/png`, `image/webp`
+- Max size: 5 MB
+- Dimensions: 128..4096 px per side
+
+The server strips EXIF, re-encodes as WebP, and produces 3 variants:
+`small` (96px), `medium` (256px), `large` (512px). `users.avatar_url` is
+set to the medium URL. Returns the full user object.
 
 ## Phase 2 — voice rooms (planned)
 

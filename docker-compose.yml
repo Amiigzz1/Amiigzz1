@@ -125,8 +125,9 @@ services:
       AGORA_MODE: mock
       PAYMENTS_MODE: mock
       MODERATION_MODE: local
-      # MinIO / S3
+      # MinIO / S3 — API talks to the container, clients use localhost.
       S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_URL: http://localhost:9000
       S3_REGION: us-east-1
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin
