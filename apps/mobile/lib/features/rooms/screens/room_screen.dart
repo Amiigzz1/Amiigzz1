@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/storage/token_storage.dart';
 import '../../auth/auth_controller.dart';
+import '../../gifts/gift_picker_sheet.dart';
 import '../live_room_client.dart';
 import '../models/room.dart';
 import '../rooms_controller.dart';
@@ -155,6 +156,8 @@ class _RoomBody extends ConsumerWidget {
         _ActionBar(
           onStage: onStage,
           isOwner: isOwner,
+          ownerId: detail.owner.id,
+          roomId: detail.id,
           onLeave: onLeave,
         ),
         const SizedBox(height: 8),
@@ -336,12 +339,26 @@ class _ActionBar extends StatelessWidget {
   const _ActionBar({
     required this.onStage,
     required this.isOwner,
+    required this.ownerId,
+    required this.roomId,
     required this.onLeave,
   });
 
   final bool onStage;
   final bool isOwner;
+  final String ownerId;
+  final String roomId;
   final VoidCallback onLeave;
+
+  void _openGiftSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => GiftPickerSheet(recipientId: ownerId, roomId: roomId),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -360,9 +377,7 @@ class _ActionBar extends StatelessWidget {
           _ActionButton(
             icon: Icons.card_giftcard,
             label: 'هدية',
-            onTap: () {
-              // TODO(phase-4): open gift picker sheet.
-            },
+            onTap: () => _openGiftSheet(context),
           ),
           if (isOwner)
             _ActionButton(

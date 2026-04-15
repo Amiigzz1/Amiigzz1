@@ -50,6 +50,10 @@ model User {
   rooms         Room[]         @relation("RoomOwner")
   wallet        Wallet?
   transactions  Transaction[]
+  giftsSent     GiftSend[]     @relation("GiftSender")
+  giftsReceived GiftSend[]     @relation("GiftRecipient")
+  payments      Payment[]
+  withdrawals   Withdrawal[]
 
   @@index([createdAt])
   @@map("users")
@@ -96,7 +100,8 @@ model Room {
   updatedAt     DateTime      @updatedAt @map("updated_at")
   closedAt      DateTime?     @map("closed_at")
 
-  owner User @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  owner    User       @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  giftSends GiftSend[]
 
   @@index([closedAt, category, country, createdAt])
   @@map("rooms")
@@ -185,4 +190,101 @@ model GameRound {
 
   @@index([startedAt])
   @@map("game_rounds")
+}
+
+// ---------- Gifts ----------
+
+model GiftCatalog {
+  id           String   @id
+  nameAr       String   @map("name_ar") @db.VarChar(40)
+  nameEn       String   @map("name_en") @db.VarChar(40)
+  priceCoins   BigInt   @map("price_coins")
+  animationUrl String?  @map("animation_url")
+  category     String   @db.VarChar(32)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  sends GiftSend[]
+
+  @@map("gifts_catalog")
+}
+
+model GiftSend {
+  id            String   @id @default(uuid()) @db.Uuid
+  giftId        String   @map("gift_id")
+  senderId      String   @map("sender_id") @db.Uuid
+  recipientId   String   @map("recipient_id") @db.Uuid
+  roomId        String?  @map("room_id") @db.Uuid
+  quantity      Int      @default(1)
+  totalCoins    BigInt   @map("total_coins")
+  totalDiamonds BigInt   @map("total_diamonds")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  gift      GiftCatalog @relation(fields: [giftId], references: [id])
+  sender    User        @relation("GiftSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User        @relation("GiftRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  room      Room?       @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([senderId, createdAt])
+  @@index([recipientId, createdAt])
+  @@map("gift_sends")
+}
+
+// ---------- Payments ----------
+
+enum PaymentStatus {
+  pending
+  succeeded
+  failed
+  refunded
+}
+
+model Payment {
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @map("user_id") @db.Uuid
+  packageId    String        @map("package_id")
+  coinsGranted BigInt        @map("coins_granted")
+  amount       Decimal       @db.Decimal(10, 2)
+  currency     String        @db.VarChar(3)
+  provider     String        @db.VarChar(32)
+  providerRef  String        @map("provider_ref")
+  status       PaymentStatus @default(pending)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  settledAt    DateTime?     @map("settled_at")
+  metadata     Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerRef])
+  @@index([userId, createdAt])
+  @@map("payments")
+}
+
+// ---------- Withdrawals ----------
+
+enum WithdrawalStatus {
+  pending
+  approved
+  rejected
+  paid
+}
+
+model Withdrawal {
+  id            String           @id @default(uuid()) @db.Uuid
+  userId        String           @map("user_id") @db.Uuid
+  diamonds      BigInt
+  amountUsd     Decimal          @map("amount_usd") @db.Decimal(10, 2)
+  method        String           @db.VarChar(32)
+  methodDetails Json             @map("method_details")
+  status        WithdrawalStatus @default(pending)
+  reviewerId    String?          @map("reviewer_id") @db.Uuid
+  reason        String?
+  requestedAt   DateTime         @default(now()) @map("requested_at")
+  reviewedAt    DateTime?        @map("reviewed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, requestedAt])
+  @@index([userId])
+  @@map("withdrawals")
 }

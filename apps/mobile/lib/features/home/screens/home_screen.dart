@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../l10n/app_strings.dart';
 import '../../profile/user_controller.dart';
+import '../../wallet/wallet_controller.dart';
 
 /// Phase 1 home stub. Lists the entry points that land in later phases
 /// (rooms in Phase 2, Ludo in Phase 3) but wires the greeting to the
@@ -23,6 +24,7 @@ class HomeScreen extends ConsumerWidget {
         appBar: AppBar(
           title: Text(strings.appName),
           actions: [
+            _WalletBadge(),
             IconButton(
               icon: const Icon(Icons.settings_outlined),
               onPressed: () => context.push('/settings'),
@@ -74,6 +76,30 @@ class HomeScreen extends ConsumerWidget {
               },
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WalletBadge extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wallet = ref.watch(walletSnapshotProvider).value;
+    return InkWell(
+      onTap: () => context.push('/wallet'),
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          children: [
+            const Icon(Icons.monetization_on, size: 18),
+            const SizedBox(width: 4),
+            Text(
+              wallet?.coins.toString() ?? '—',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
         ),
       ),
     );

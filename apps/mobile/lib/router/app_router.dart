@@ -13,6 +13,7 @@ import '../features/profile/screens/settings_screen.dart';
 import '../features/rooms/screens/create_room_screen.dart';
 import '../features/rooms/screens/discover_screen.dart';
 import '../features/rooms/screens/room_screen.dart';
+import '../features/wallet/screens/wallet_screen.dart';
 import '../screens/splash_screen.dart';
 
 /// Bridge an arbitrary Listenable-friendly source to go_router's refresh stream.
@@ -91,6 +92,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/games/ludo/match',
         builder: (_, __) => const LudoMatchScreen(),
       ),
+      GoRoute(path: '/wallet', builder: (_, __) => const WalletScreen()),
     ],
   );
 });

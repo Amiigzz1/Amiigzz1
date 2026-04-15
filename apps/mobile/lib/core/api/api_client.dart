@@ -57,6 +57,12 @@ class ApiClient {
     );
   }
 
+  Future<List<dynamic>> getList(String path) async {
+    return _run<List<dynamic>>(
+      () => _dio.get<List<dynamic>>(path),
+    );
+  }
+
   Future<Map<String, dynamic>> patch(
     String path,
     Map<String, dynamic> body,
