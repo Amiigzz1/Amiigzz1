@@ -85,6 +85,42 @@ export class RealtimeService {
     });
   }
 
+  // ---- Ludo ----
+
+  async ludoQuickMatch(userId: string): Promise<{
+    gameId: string;
+    state: unknown;
+  }> {
+    return this.callJson<{ gameId: string; state: unknown }>(
+      'POST',
+      '/internal/games/ludo/match',
+      { userId, timeoutMs: 3000, fillWithBots: false },
+    );
+  }
+
+  private async callJson<T>(
+    method: 'POST' | 'DELETE',
+    path: string,
+    body: unknown,
+  ): Promise<T> {
+    if (!this.internalToken) {
+      throw new Error('REALTIME_INTERNAL_TOKEN is unset');
+    }
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      method,
+      headers: {
+        'content-type': 'application/json',
+        'x-internal-token': this.internalToken,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`realtime ${method} ${path} → ${res.status} ${text}`);
+    }
+    return (await res.json()) as T;
+  }
+
   private async call(
     method: 'POST' | 'DELETE',
     path: string,

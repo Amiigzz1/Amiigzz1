@@ -48,6 +48,8 @@ model User {
   profile       UserProfile?
   refreshTokens RefreshToken[]
   rooms         Room[]         @relation("RoomOwner")
+  wallet        Wallet?
+  transactions  Transaction[]
 
   @@index([createdAt])
   @@map("users")
@@ -124,4 +126,63 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("refresh_tokens")
+}
+
+// ---------- Economy ----------
+
+enum TxType {
+  purchase
+  game_stake
+  game_payout
+  gift_sent
+  gift_received
+  withdrawal
+  admin_adjust
+}
+
+enum GameKind {
+  ludo
+}
+
+model Wallet {
+  userId    String   @id @map("user_id") @db.Uuid
+  coins     BigInt   @default(0)
+  diamonds  BigInt   @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallets")
+}
+
+model Transaction {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  type         TxType
+  coinsDelta   BigInt   @default(0) @map("coins_delta")
+  diamondDelta BigInt   @default(0) @map("diamond_delta")
+  /// Idempotency key scoped by (user, type, refId).
+  refId        String   @map("ref_id")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, refId])
+  @@index([userId, createdAt])
+  @@map("transactions")
+}
+
+model GameRound {
+  id           String    @id @default(uuid()) @db.Uuid
+  kind         GameKind
+  stakeCoins   BigInt    @map("stake_coins")
+  winnerId     String?   @map("winner_id") @db.Uuid
+  participants String[]  @default([]) @db.Uuid
+  startedAt    DateTime  @default(now()) @map("started_at")
+  endedAt      DateTime? @map("ended_at")
+  metadata     Json?
+
+  @@index([startedAt])
+  @@map("game_rounds")
 }

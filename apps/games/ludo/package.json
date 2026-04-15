@@ -1,0 +1,19 @@
+{
+  "name": "@majlis/ludo",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Majlis Ludo — view-only Phaser 3 client. Game logic lives in the Go realtime service.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "tsc --noEmit",
+    "test": "echo 'no tests yet' && exit 0"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  }
+}

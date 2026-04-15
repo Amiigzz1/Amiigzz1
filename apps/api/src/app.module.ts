@@ -9,9 +9,11 @@ import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { RedisModule } from './redis/redis.module';
+import { GamesModule } from './games/games.module';
 import { RoomsModule } from './rooms/rooms.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
+import { WalletModule } from './wallet/wallet.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     UsersModule,
     RoomsModule,
+    WalletModule,
+    GamesModule,
     HealthModule,
   ],
 })

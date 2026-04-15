@@ -61,8 +61,7 @@ class HomeScreen extends ConsumerWidget {
                     _HomeTile(
                       icon: Icons.casino_outlined,
                       title: strings.homePlayLudo,
-                      // TODO(phase-3): route to matchmaking.
-                      onTap: null,
+                      onTap: () => context.push('/games/ludo/match'),
                     ),
                     const SizedBox(height: 12),
                     _HomeTile(

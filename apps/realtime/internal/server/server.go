@@ -15,6 +15,7 @@ import (
 	"github.com/majlis/realtime/internal/auth"
 	"github.com/majlis/realtime/internal/config"
 	"github.com/majlis/realtime/internal/hub"
+	"github.com/majlis/realtime/internal/ludo"
 	"github.com/majlis/realtime/internal/rooms"
 )
 
@@ -23,14 +24,16 @@ type Server struct {
 	cfg      config.Config
 	store    *rooms.Store
 	hub      *hub.Hub
+	ludo     *ludo.Manager
 	upgrader websocket.Upgrader
 }
 
-func New(cfg config.Config, store *rooms.Store, h *hub.Hub) *Server {
+func New(cfg config.Config, store *rooms.Store, h *hub.Hub, lm *ludo.Manager) *Server {
 	return &Server{
 		cfg:   cfg,
 		store: store,
 		hub:   h,
+		ludo:  lm,
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
@@ -54,6 +57,10 @@ func (s *Server) Routes() http.Handler {
 	// Every request must carry `X-Internal-Token` matching REALTIME_INTERNAL_TOKEN.
 	mux.Handle("/internal/rooms", s.internalMW(http.HandlerFunc(s.handleInternalRoomCreate)))
 	mux.Handle("/internal/rooms/", s.internalMW(http.HandlerFunc(s.handleInternalRoomAction)))
+
+	// Ludo game surface.
+	mux.Handle("/internal/games/ludo/match", s.internalMW(http.HandlerFunc(s.handleLudoMatch)))
+	mux.Handle("/internal/games/ludo/", s.internalMW(http.HandlerFunc(s.handleLudoAction)))
 
 	return mux
 }
@@ -288,6 +295,94 @@ func (s *Server) handleMute(w http.ResponseWriter, r *http.Request, roomID strin
 	}
 	s.hub.BroadcastState(roomID, updated)
 	writeJSON(w, http.StatusOK, updated)
+}
+
+// ---------- Ludo ----------
+
+type ludoMatchReq struct {
+	UserID       string `json:"userId"`
+	TimeoutMs    int    `json:"timeoutMs"`
+	FillWithBots bool   `json:"fillWithBots"`
+}
+
+type ludoMatchResp struct {
+	GameID string         `json:"gameId"`
+	State  *ludo.GameState `json:"state"`
+}
+
+func (s *Server) handleLudoMatch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req ludoMatchReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID == "" {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	timeout := time.Duration(req.TimeoutMs) * time.Millisecond
+	if timeout == 0 {
+		timeout = 3 * time.Second
+	}
+	gameID, err := s.ludo.Enqueue(req.UserID, timeout, req.FillWithBots)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusGatewayTimeout)
+		return
+	}
+	state, _ := s.ludo.State(gameID)
+	writeJSON(w, http.StatusOK, ludoMatchResp{GameID: gameID, State: state})
+}
+
+// /internal/games/ludo/{id}/{action}
+func (s *Server) handleLudoAction(w http.ResponseWriter, r *http.Request) {
+	rest := strings.TrimPrefix(r.URL.Path, "/internal/games/ludo/")
+	parts := strings.Split(rest, "/")
+	if len(parts) < 2 {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	gameID, action := parts[0], parts[1]
+
+	switch action {
+	case "state":
+		state, err := s.ludo.State(gameID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		writeJSON(w, http.StatusOK, state)
+	case "roll":
+		var body struct {
+			UserID string `json:"userId"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		state, roll, err := s.ludo.Roll(gameID, body.UserID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"state": state, "roll": roll})
+	case "move":
+		var body struct {
+			UserID   string `json:"userId"`
+			TokenIdx int    `json:"tokenIdx"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		state, move, err := s.ludo.Move(gameID, body.UserID, body.TokenIdx)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"state": state, "move": move})
+	default:
+		http.Error(w, "unknown action", http.StatusNotFound)
+	}
 }
 
 // ---------- helpers ----------

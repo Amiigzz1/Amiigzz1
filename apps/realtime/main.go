@@ -22,6 +22,7 @@ import (
 
 	"github.com/majlis/realtime/internal/config"
 	"github.com/majlis/realtime/internal/hub"
+	"github.com/majlis/realtime/internal/ludo"
 	"github.com/majlis/realtime/internal/rooms"
 	"github.com/majlis/realtime/internal/server"
 )
@@ -42,7 +43,8 @@ func main() {
 
 	store := rooms.NewStore(rdb, 6*time.Hour)
 	h := hub.New(store)
-	srv := server.New(cfg, store, h)
+	ludoMgr := ludo.NewManager()
+	srv := server.New(cfg, store, h, ludoMgr)
 
 	httpSrv := &http.Server{
 		Addr:              ":" + cfg.Port,

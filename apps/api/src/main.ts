@@ -1,6 +1,14 @@
-import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+
 import { AppModule } from './app.module';
+
+// JSON.stringify chokes on bigint values by default. Serialize them as
+// strings so clients never see silent data loss.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(BigInt.prototype as any).toJSON = function (): string {
+  return this.toString();
+};
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {

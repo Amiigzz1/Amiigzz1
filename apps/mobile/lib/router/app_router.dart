@@ -6,6 +6,7 @@ import '../features/auth/auth_controller.dart';
 import '../features/auth/auth_state.dart';
 import '../features/auth/screens/otp_verify_screen.dart';
 import '../features/auth/screens/phone_entry_screen.dart';
+import '../features/games/screens/ludo_match_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/profile/screens/profile_setup_screen.dart';
 import '../features/profile/screens/settings_screen.dart';
@@ -85,6 +86,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/rooms/:id',
         builder: (_, s) => RoomScreen(roomId: s.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/games/ludo/match',
+        builder: (_, __) => const LudoMatchScreen(),
       ),
     ],
   );
