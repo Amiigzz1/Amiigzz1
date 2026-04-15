@@ -8,6 +8,7 @@ import '../features/auth/screens/otp_verify_screen.dart';
 import '../features/auth/screens/phone_entry_screen.dart';
 import '../features/games/screens/ludo_match_screen.dart';
 import '../features/home/screens/home_screen.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import '../features/profile/screens/profile_setup_screen.dart';
 import '../features/profile/screens/settings_screen.dart';
 import '../features/rooms/screens/create_room_screen.dart';
@@ -93,6 +94,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const LudoMatchScreen(),
       ),
       GoRoute(path: '/wallet', builder: (_, __) => const WalletScreen()),
+      GoRoute(
+        path: '/onboarding',
+        builder: (_, __) => const OnboardingScreen(),
+      ),
     ],
   );
 });

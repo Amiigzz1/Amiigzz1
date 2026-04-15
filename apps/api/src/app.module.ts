@@ -9,6 +9,7 @@ import { GamesModule } from './games/games.module';
 import { GiftsModule } from './gifts/gifts.module';
 import { HealthModule } from './health/health.module';
 import { ModerationModule } from './moderation/moderation.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RealtimeModule } from './realtime/realtime.module';
@@ -40,6 +41,7 @@ import { WithdrawalsModule } from './withdrawals/withdrawals.module';
     PaymentsModule,
     WithdrawalsModule,
     ModerationModule,
+    NotificationsModule,
     HealthModule,
   ],
 })

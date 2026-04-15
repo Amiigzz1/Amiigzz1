@@ -42,8 +42,10 @@ model User {
   birthdate    DateTime? @db.Date
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
-  bannedAt     DateTime? @map("banned_at")
-  banReason    String?   @map("ban_reason")
+  bannedAt            DateTime? @map("banned_at")
+  banReason           String?   @map("ban_reason")
+  prayerQuietHours    Boolean   @default(true) @map("prayer_quiet_hours")
+  notificationsEnabled Boolean  @default(true) @map("notifications_enabled")
 
   profile         UserProfile?
   refreshTokens   RefreshToken[]
@@ -57,9 +59,24 @@ model User {
   filedReports    ModerationReport[]
   receivedActions ModerationAction[]  @relation("TargetOfAction")
   appeals         ModerationAppeal[]
+  deviceTokens    DeviceToken[]
 
   @@index([createdAt])
   @@map("users")
+}
+
+model DeviceToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  token      String   @unique
+  platform   String   @db.VarChar(16) // 'ios' | 'android' | 'web'
+  createdAt  DateTime @default(now()) @map("created_at")
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_tokens")
 }
 
 model UserProfile {
