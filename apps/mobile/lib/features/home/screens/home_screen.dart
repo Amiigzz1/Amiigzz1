@@ -68,8 +68,7 @@ class HomeScreen extends ConsumerWidget {
                     _HomeTile(
                       icon: Icons.forum_outlined,
                       title: strings.homeExploreRooms,
-                      // TODO(phase-2): route to /rooms.
-                      onTap: null,
+                      onTap: () => context.push('/rooms'),
                     ),
                   ],
                 );

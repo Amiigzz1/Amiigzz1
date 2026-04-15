@@ -9,6 +9,9 @@ import '../features/auth/screens/phone_entry_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/profile/screens/profile_setup_screen.dart';
 import '../features/profile/screens/settings_screen.dart';
+import '../features/rooms/screens/create_room_screen.dart';
+import '../features/rooms/screens/discover_screen.dart';
+import '../features/rooms/screens/room_screen.dart';
 import '../screens/splash_screen.dart';
 
 /// Bridge an arbitrary Listenable-friendly source to go_router's refresh stream.
@@ -74,6 +77,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
       GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+      GoRoute(path: '/rooms', builder: (_, __) => const DiscoverScreen()),
+      GoRoute(
+        path: '/rooms/new',
+        builder: (_, __) => const CreateRoomScreen(),
+      ),
+      GoRoute(
+        path: '/rooms/:id',
+        builder: (_, s) => RoomScreen(roomId: s.pathParameters['id']!),
+      ),
     ],
   );
 });
