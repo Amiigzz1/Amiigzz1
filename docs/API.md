@@ -133,14 +133,59 @@ The server strips EXIF, re-encodes as WebP, and produces 3 variants:
 `small` (96px), `medium` (256px), `large` (512px). `users.avatar_url` is
 set to the medium URL. Returns the full user object.
 
-## Phase 2 — voice rooms (planned)
+## Phase 2 — voice rooms
 
-| Method | Path                      | Auth | Purpose                              |
-|--------|---------------------------|------|--------------------------------------|
-| GET    | `/v1/rooms`               | ✅    | List (filter: `category`, `country`). |
-| POST   | `/v1/rooms`               | ✅    | Create a room.                       |
-| GET    | `/v1/rooms/:id`           | ✅    | Room details + Agora token.          |
-| WS     | `ws://realtime/ws`        | ✅    | Presence + seat events.              |
+Implemented (Phase 2a): room CRUD + Agora token issuance.
+Pending (Phase 2b): WebSocket presence + seat events from the Go realtime service.
+
+### `POST /v1/rooms`
+
+Auth: required.
+
+```jsonc
+{
+  "name": "بيت اللودو",         // 2..64
+  "description": "…",           // optional, 0..240
+  "category": "gaming",         // gaming | music | chat | story
+  "country": "SA",              // optional, one of the 8 allow-listed
+  "maxSeats": 8                 // optional, 2..12, defaults to 8
+}
+```
+
+Returns a `RoomSummary` — id, owner (id + displayName + avatarUrl),
+live counts, maxSeats, etc.
+
+### `GET /v1/rooms?category=&country=&page=&pageSize=`
+
+Auth: required. All query params are optional. Returns paginated, open
+rooms ordered by live activity (speakers > listeners > recency).
+
+```jsonc
+{
+  "items": [ /* RoomSummary[] */ ],
+  "page": 1,
+  "pageSize": 20,
+  "total": 42
+}
+```
+
+### `GET /v1/rooms/:id`
+
+Auth: required. Returns `RoomDetail` which includes the `RoomSummary`
+fields plus:
+
+- `agoraChannel` — opaque channel id
+- `realtimeWsUrl` — e.g. `ws://localhost:8080/ws` (Phase 2b)
+- `join` — Agora token for the caller:
+  - `channel`, `appId`, `token`, `uid` (uint32), `expiresAt` (unix), `role`
+  - `role` is `publisher` for the room owner, `audience` otherwise. Seat
+    takers are promoted to publisher server-side (Phase 2b).
+
+Locked rooms 403 for non-owners. Closed/missing rooms 404.
+
+### `DELETE /v1/rooms/:id`
+
+Auth: required. Owner-only. Soft-closes the room (sets `closed_at`).
 
 ## Phase 3 — games (planned)
 

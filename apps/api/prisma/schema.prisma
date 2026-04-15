@@ -47,6 +47,7 @@ model User {
 
   profile       UserProfile?
   refreshTokens RefreshToken[]
+  rooms         Room[]         @relation("RoomOwner")
 
   @@index([createdAt])
   @@map("users")
@@ -63,6 +64,40 @@ model UserProfile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_profiles")
+}
+
+// ---------- Rooms ----------
+
+enum RoomCategory {
+  gaming
+  music
+  chat
+  story
+}
+
+model Room {
+  id            String        @id @default(uuid()) @db.Uuid
+  name          String        @db.VarChar(64)
+  description   String?       @db.VarChar(240)
+  ownerId       String        @map("owner_id") @db.Uuid
+  category      RoomCategory
+  country       Country?
+  maxSeats      Int           @default(8) @map("max_seats")
+  locked        Boolean       @default(false)
+  // Agora channel id. Unique so two rooms never collide on the voice layer.
+  agoraChannel  String        @unique @map("agora_channel")
+  // Live participant + speaker counts, maintained by the Go realtime service.
+  // Persisted here so Discover can rank rooms without a round-trip to Redis.
+  listenersLive Int           @default(0) @map("listeners_live")
+  speakersLive  Int           @default(0) @map("speakers_live")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  closedAt      DateTime?     @map("closed_at")
+
+  owner User @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([closedAt, category, country, createdAt])
+  @@map("rooms")
 }
 
 // ---------- Auth ----------
