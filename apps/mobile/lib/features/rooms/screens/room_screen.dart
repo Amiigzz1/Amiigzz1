@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../auth/auth_controller.dart';
 import '../../gifts/gift_picker_sheet.dart';
+import '../../moderation/report_sheet.dart';
 import '../live_room_client.dart';
 import '../models/room.dart';
 import '../rooms_controller.dart';
@@ -233,7 +234,16 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 48),
+          IconButton(
+            icon: const Icon(Icons.flag_outlined),
+            tooltip: 'بلاغ',
+            onPressed: () => showReportSheet(
+              context,
+              targetType: 'room',
+              targetId: room.id,
+              roomId: room.id,
+            ),
+          ),
         ],
       ),
     );

@@ -45,15 +45,18 @@ model User {
   bannedAt     DateTime? @map("banned_at")
   banReason    String?   @map("ban_reason")
 
-  profile       UserProfile?
-  refreshTokens RefreshToken[]
-  rooms         Room[]         @relation("RoomOwner")
-  wallet        Wallet?
-  transactions  Transaction[]
-  giftsSent     GiftSend[]     @relation("GiftSender")
-  giftsReceived GiftSend[]     @relation("GiftRecipient")
-  payments      Payment[]
-  withdrawals   Withdrawal[]
+  profile         UserProfile?
+  refreshTokens   RefreshToken[]
+  rooms           Room[]              @relation("RoomOwner")
+  wallet          Wallet?
+  transactions    Transaction[]
+  giftsSent       GiftSend[]          @relation("GiftSender")
+  giftsReceived   GiftSend[]          @relation("GiftRecipient")
+  payments        Payment[]
+  withdrawals     Withdrawal[]
+  filedReports    ModerationReport[]
+  receivedActions ModerationAction[]  @relation("TargetOfAction")
+  appeals         ModerationAppeal[]
 
   @@index([createdAt])
   @@map("users")
@@ -100,8 +103,9 @@ model Room {
   updatedAt     DateTime      @updatedAt @map("updated_at")
   closedAt      DateTime?     @map("closed_at")
 
-  owner    User       @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  giftSends GiftSend[]
+  owner             User              @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  giftSends         GiftSend[]
+  moderationReports ModerationReport[]
 
   @@index([closedAt, category, country, createdAt])
   @@map("rooms")
@@ -287,4 +291,96 @@ model Withdrawal {
   @@index([status, requestedAt])
   @@index([userId])
   @@map("withdrawals")
+}
+
+// ---------- Moderation ----------
+
+enum ReportTargetType {
+  user
+  room
+  message
+  voice_clip
+}
+
+enum ReportStatus {
+  open
+  under_review
+  resolved
+  dismissed
+}
+
+enum ModerationActionKind {
+  warning
+  mute_24h
+  ban_7d
+  ban_30d
+  ban_permanent
+  no_action
+}
+
+enum AppealStatus {
+  open
+  upheld
+  overturned
+}
+
+model ModerationReport {
+  id          String           @id @default(uuid()) @db.Uuid
+  reporterId  String           @map("reporter_id") @db.Uuid
+  targetType  ReportTargetType @map("target_type")
+  targetId    String           @map("target_id")
+  roomId      String?          @map("room_id") @db.Uuid
+  category    String           @db.VarChar(32)
+  details     String?          @db.VarChar(500)
+  status      ReportStatus     @default(open)
+  autoFlags   Json?            @map("auto_flags")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  resolvedAt  DateTime?        @map("resolved_at")
+  resolverId  String?          @map("resolver_id") @db.Uuid
+
+  reporter User               @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  room     Room?              @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  actions  ModerationAction[]
+
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+  @@map("moderation_reports")
+}
+
+model ModerationAction {
+  id           String                @id @default(uuid()) @db.Uuid
+  targetUserId String                @map("target_user_id") @db.Uuid
+  moderatorId  String                @map("moderator_id") @db.Uuid
+  action       ModerationActionKind
+  reason       String                @db.VarChar(500)
+  reportId     String?               @map("report_id") @db.Uuid
+  banUntil     DateTime?             @map("ban_until")
+  createdAt    DateTime              @default(now()) @map("created_at")
+
+  target  User              @relation("TargetOfAction", fields: [targetUserId], references: [id], onDelete: Cascade)
+  report  ModerationReport? @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  appeals ModerationAppeal[]
+
+  @@index([targetUserId])
+  @@index([createdAt])
+  @@map("moderation_actions")
+}
+
+model ModerationAppeal {
+  id            String       @id @default(uuid()) @db.Uuid
+  userId        String       @map("user_id") @db.Uuid
+  actionId      String       @map("action_id") @db.Uuid
+  reason        String       @db.VarChar(500)
+  status        AppealStatus @default(open)
+  reviewerId    String?      @map("reviewer_id") @db.Uuid
+  reviewerNotes String?      @map("reviewer_notes") @db.VarChar(500)
+  createdAt     DateTime     @default(now()) @map("created_at")
+  resolvedAt    DateTime?    @map("resolved_at")
+
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action ModerationAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, actionId])
+  @@index([status, createdAt])
+  @@map("moderation_appeals")
 }
